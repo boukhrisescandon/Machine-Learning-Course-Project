@@ -1,0 +1,87 @@
+---
+output:
+  html_document:
+    keep_md: yes
+---
+
+# Practical Machine Learning
+## Course Project
+#### January 2015
+
+The goal of this project is to use the data from accelerometers on the belt, forearm, arm, and dumbbell of 6 participants to quantify how well the participant performs barbell lifts. The participants were asked to perform barbell lifts correctly and incorrectly in 5 different ways. 
+
+The data for this analysis came from "Qualitative Activity Recognition of Weight Lifting Exercises" by Velloso et al. The training data for this project are available here:
+https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv
+
+The test data are available here:
+https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv
+
+
+### Download csv training and testing data
+```{r, echo=TRUE}
+download.file(url = "https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv", destfile = "pml-training.csv")
+download.file(url = "https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv", destfile = "pml-testing.csv")
+```
+
+### Read in the CSV data
+```{r, echo=TRUE}
+pml_train <- read.csv("pml-training.csv", na.strings = c("NA", "#DIV/0!", ""))
+pml_test <- read.csv("pml-testing.csv", na.strings = c("NA", "#DIV/0!", ""))
+dim(pml_train)
+dim(pml_test)
+```
+
+### Remove any columns that contain only missing values. 100 columns are removed from both sets.
+```{r, echo=TRUE}
+pml_train <- pml_train[,colSums(is.na(pml_train)) == 0]
+pml_test <- pml_test[,colSums(is.na(pml_test)) == 0]
+dim(pml_train)
+dim(pml_test)
+```
+
+### Keep only the columns that contain the words belt, arm, dumbbell, and forearm in the name. This becomes all columns except for the first 7 columns.
+```{r, echo=TRUE}
+names(pml_train)
+pml_train <- pml_train[,-c(1:7)]
+pml_test <- pml_test[,-c(1:7)]
+dim(pml_train)
+dim(pml_test)
+```
+
+### Partition the training data into a training set (80%) and a validation set (20%)
+```{r, echo=TRUE}
+library(caret)
+set.seed(123)
+trainingset <- createDataPartition(pml_train$classe, p = 0.8, list = FALSE)
+training <- pml_train[trainingset, ]
+validation <- pml_train[-trainingset, ]
+dim(training)
+dim(validation)
+```
+
+
+## Random Forest Model
+```{r, echo=TRUE}
+library(randomForest)
+rf <- randomForest(classe ~ ., data = training, importance = TRUE, ntrees = 5)
+```
+
+### Check the accuracy of the training set when using the Random Forest model
+```{r, echo=TRUE}
+predict_training <- predict(rf, training)
+print(confusionMatrix(predict_training, training$classe))
+```
+
+### Now, check the accuracy of the Random Forest model against the validation set
+```{r, echo=TRUE}
+predict_validation <- predict(rf, validation)
+print(confusionMatrix(predict_validation, validation$classe))
+```
+
+
+
+### Let's use the model on the testing data set to determine the outcome of classe
+```{r, echo=TRUE}
+predict_test <- predict(rf, pml_test)
+predict_test
+```
